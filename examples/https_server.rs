@@ -27,7 +27,7 @@ pub fn create_https_server(cert: Vec<u8>, key: Vec<u8>) {
 }
 
 fn main() {
-    let ca = Certificate::new("../ca/cert.pem", "../ca/key.pem").unwrap();
+    let ca = Certificate::new("./ca/cert.pem", "./ca/key.pem").unwrap();
     let cert = make_cert_from_ca("localhost", &ca).unwrap();
     let key = ca.key.private_key_to_pem_pkcs8().unwrap();
     let cert = cert.to_pem().unwrap();
