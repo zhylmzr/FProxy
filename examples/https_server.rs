@@ -1,3 +1,11 @@
+/// A simple https server.
+/// Use:
+/// ```bash
+/// install "ca/cert.pem"(or use generate_ca.sh to generate a new certificate) and trust it(Windows user must install it to root space).
+/// cargo run --example https_server
+/// open browser locate to "https://localhost:8001"
+/// ```
+
 use tiny_http::{Response, Server, SslConfig};
 use FProxy::cert::{make_cert_from_ca, Certificate};
 
