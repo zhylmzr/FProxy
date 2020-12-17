@@ -1,3 +1,10 @@
+/// A simple http forward proxy example.
+/// Use:
+/// ```bash
+/// cargo run --example http_proxy
+/// curl -x http://127.0.0.1:2233 http://www.baidu.com
+/// ```
+
 use std::{
     io,
     io::{BufRead, Read, Write},
