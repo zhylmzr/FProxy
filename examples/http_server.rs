@@ -1,29 +1,55 @@
-/// A simple http server.
-/// Use:
-/// ```bash
-/// cargo run --example http_server
-/// open browser locate to "http://localhost:2233"
-/// ```
+use bytes::BytesMut;
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufStream};
+use tokio::net::TcpListener;
 
-use httparse::Header;
-use std::net::TcpStream;
-use FProxy::http::{Response, Server};
+fn http_check(buffer: &BytesMut) -> bool {
+    let len = buffer.len();
+    if len <= 4 {
+        return false;
+    }
+    buffer[len - 1] == b'\n'
+        && buffer[len - 2] == b'\r'
+        && buffer[len - 3] == b'\n'
+        && buffer[len - 4] == b'\r'
+}
 
-fn main() {
-    let mut server = Server::create_http_server("127.0.0.1:2233");
+#[tokio::main]
+async fn main() {
+    let listener = TcpListener::bind("127.0.0.1:2233").await.unwrap();
 
-    server.set_stream_handler(|stream: TcpStream| -> TcpStream {
-        let mut response = Response::new(stream);
-        response.set_status_code(200);
-        response.write_headers(&[Header {
-            name: "Content-Type",
-            value: b"text/html",
-        }]);
-        response.write_body(b"<h1>hello world</h1>");
-        response.flush().unwrap();
-        response.stream
-    });
+    loop {
+        let (socket, _) = listener.accept().await.unwrap();
 
-    println!("HTTP Server is running: http://127.0.0.1:2233");
-    server.start();
+        tokio::spawn(async move {
+            let mut socket = BufStream::new(socket);
+            let mut buffer = BytesMut::new();
+
+            loop {
+                if http_check(&buffer) {
+                    break;
+                }
+
+                if 0 == socket.read_buf(&mut buffer).await.unwrap() {
+                    if !buffer.is_empty() {
+                        println!("connection closed by peer");
+                    }
+                    return;
+                }
+            }
+
+            let content = "hello world";
+            socket
+                .write_all(
+                    format!(
+                        "HTTP/1.1 200\r\nContent-Length: {}\r\n\r\n{}\r\n\r\n",
+                        content.len(),
+                        content
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+            socket.flush().await.unwrap();
+        });
+    }
 }
